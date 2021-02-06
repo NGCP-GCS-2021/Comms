@@ -12,7 +12,7 @@ print("This device's name: ", device.get_node_id())
 
 
 def sample_callback(message):
-    print('Recieved: ', message.data, '\nFrom:', message.remote_device.get_node_id())
+    print('Received: ', message.data, '\nFrom:', message.remote_device.get_node_id())
     print(xbee.ToGCS.deserialize(message.data))
 
 device.add_data_received_callback(sample_callback)
