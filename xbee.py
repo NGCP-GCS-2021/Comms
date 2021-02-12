@@ -263,6 +263,7 @@ class ManualControl():
 	horizontal: float
 	arm: float
 	claw: float
+	max_speed: float
 	
 
 ## CODE FOR TESTING
