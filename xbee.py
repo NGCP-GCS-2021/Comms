@@ -46,7 +46,6 @@ class TransmitThread (Thread):
     def run(self):
         while True:
             self.function()
-            sleep(0.9)
 
 class Packet:
     def __init__(self, data: bytearray):
@@ -55,7 +54,7 @@ class Packet:
     def transmit(self, device, recipient):
         packet_size = int.from_bytes(device.get_parameter('NP'), byteorder='big')-5
         count = ceil(len(self.data)/float(packet_size))
-        print("Sending ", count," packets")
+        print("Sending ", count," packets of ", packet_size, " length")
         self.data = struct.pack('I', int(count)) + self.data
 
         packets = [self.data[i:i+packet_size] for i in range(0,len(self.data), packet_size)]

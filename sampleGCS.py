@@ -3,6 +3,7 @@ from digi.xbee.devices import DigiMeshDevice
 import xbee
 from xbee import ToERU, ToGCS, Orientation, LatLng, ManualControl, Geofence
 import threading
+import struct
 
 comm_port = "/dev/ttyUSB0" # can be swapped out for "/dev/ttyUSB0" for serial connection
 baud_rate = "9600"
@@ -29,11 +30,34 @@ hiker_pos = LatLng(35.083519, -120.534821)
 state = 1
 stop = False
 
+packet_buffers = {}
+packet_counters = {}
+
 def packet_received(packet):
-    print('Received packet from ', message.remote_device.get_node_id())
-    with xbee.read_lock: # Acquire lock to read command data from GCS
-        telemetry_data = ToGCS.deserialize(packet.data)
-        print(message.remote_device.get_node_id(),": ", telemetry_data)
+    print('Received packet from ', packet.remote_device.get_node_id())
+    global packet_buffers 
+    global packet_counters
+    global current_state
+    global hiker_position
+
+    dev_addr = packet.remote_device.get_64bit_addr()
+    data = None
+
+    if dev_addr not in packet_counters or packet_counters[dev_addr] is 0:
+        packet_counters[dev_addr] = struct.unpack("I", packet.data[:4])[0] -1 
+        data = packet.data[4:]
+        print("expecting ", packet_counters[dev_addr]," packets")
+        packet_buffers[dev_addr] = b''
+    else:
+        packet_counters[dev_addr] -= 1
+        data = packet.data
+
+    packet_buffers[dev_addr] += data
+
+    if packet_counters[dev_addr] is 0:
+        with xbee.read_lock: # Acquire lock to read command data from GCS
+            telemetry_data = ToGCS.deserialize(packet_buffers[dev_addr])
+            print(packet.remote_device.get_node_id(), ": ", telemetry_data)
 
 
 device.add_data_received_callback(packet_received)

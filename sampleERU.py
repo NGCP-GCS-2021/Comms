@@ -25,7 +25,7 @@ packet_buffer = b''
 packet_counter = 0
 
 def packet_received_with(packet):
-    print('Received packet from ', packet.remote_device)
+    print('Received packet from ', packet.remote_device.get_node_id())
     global gcs_addr 
     global packet_counter
     global packet_buffer
@@ -33,7 +33,7 @@ def packet_received_with(packet):
     global hiker_position
 
     with gcs_lock:
-        gcs_addr = packet.remote_device
+        gcs_addr = packet.remote_device.get_64bit_addr()
     data = None
 
     if packet_counter is 0:
@@ -65,7 +65,7 @@ def transmit_packet():
         telemetry_data.battery -= 0.0001
         telemetry_data.current_state = current_state
     if gcs_addr:
-        # telemetry_data.serialize().transmit(device, gcs_addr)
+        telemetry_data.serialize().transmit(device, gcs_addr)
         print("Transmitting")
 
     time.sleep(2)
@@ -73,7 +73,7 @@ def transmit_packet():
 transmitThread = xbee.TransmitThread(transmit_packet)
 
 try:
-    #transmitThread.start()
+    transmitThread.start()
 
     while True:
         if current_state is 0:
