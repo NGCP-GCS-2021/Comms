@@ -1,11 +1,11 @@
 import time
 from digi.xbee.devices import DigiMeshDevice
 import xbee
-from xbee import ToERU, ToGCS, Orientation, LatLng, ManualControl, Geofence
+from xbee import ToMAC, ToGCS, Orientation, LatLng, ManualControl, Geofence
 import threading
 import struct
 
-comm_port = "/dev/ttyAMA0" # can be swapped out for "/dev/ttyUSB0" for serial connection
+comm_port = "/dev/ttyUSB1" # can be swapped out for "/dev/ttyUSB0" for serial connection
 baud_rate = "9600"
 
 device = DigiMeshDevice(port=comm_port, baud_rate=baud_rate)
@@ -13,12 +13,12 @@ device.open()
 
 print("This device's name: ", device.get_node_id())
 
-telemetry_data = ToGCS(0, 0, Orientation(0,0,0), LatLng(35.082094, -120.512722), 0.98, True, 0, False, LatLng(0,0), 0, False, True)
+telemetry_data = ToGCS(0, 0, Orientation(0,0,0), LatLng(35.052094, -120.552722), 0.98, True, 0, False, LatLng(0,0), 0, False, True)
 gcs_lock = threading.Lock()
 gcs_addr = None
 
 hiker_pos = LatLng(0,0)
-current_pos = LatLng(35.082094, -120.512722)
+current_pos = LatLng(35.052094, -120.552722)
 current_state = 0
 
 packet_buffer = b''
@@ -49,7 +49,7 @@ def packet_received_with(packet):
 
     if packet_counter is 0:
         with xbee.read_lock: # Acquire lock to read command data from GCS
-            command_data = ToERU.deserialize(packet_buffer)
+            command_data = ToMAC.deserialize(packet_buffer)
             if command_data.stop:
                 print("STOPPPING AT ", current_pos)
             hiker_pos = command_data.hiker_position
