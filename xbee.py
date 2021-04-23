@@ -412,6 +412,7 @@ class ManualControl():
     arm: float
     claw: float
     speed: float
+    max_speed: float
 
     def __init__(self, vertical, horizontal, arm, claw, speed):
         self.vertical = vertical
@@ -422,7 +423,7 @@ class ManualControl():
 
     def __repr__(self):
         return str(self.__dict__)[1:-1]
-    
+
 
 ## CODE FOR TESTING
 orientation = Orientation(1,1,1)
