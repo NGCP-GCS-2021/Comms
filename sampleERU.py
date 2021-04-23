@@ -5,7 +5,7 @@ from xbee import ToERU, ToGCS, Orientation, LatLng, ManualControl, Geofence
 import threading
 import struct
 
-comm_port = "/dev/ttyAMA0" # can be swapped out for "/dev/ttyUSB0" for serial connection
+comm_port = "/dev/ttyAMA0" # can be swapped out for "/dev/ttyUSB0" for serial connection - Might change based off how things are plugged in
 baud_rate = "9600"
 
 device = DigiMeshDevice(port=comm_port, baud_rate=baud_rate)
@@ -48,15 +48,16 @@ def packet_received_with(packet):
     packet_buffer += data
 
     if packet_counter is 0:
-        with xbee.read_lock: # Acquire lock to read command data from GCS
+        with xbee.read_lock: # Acquire lock to read command data from GCS  ||  Read data from GCS
             command_data = ToERU.deserialize(packet_buffer)
             if command_data.stop:
-                print("STOPPPING AT ", current_pos)
-            hiker_pos = command_data.hiker_position
+                print("STOPPPING AT ", current_pos)     # Emergency Stop
+            hiker_pos = command_data.hiker_position     # use command_data.(whatever) to receive whatever data is needed
             current_state = command_data.perform_state
 
 device.add_data_received_callback(packet_received_with)
 
+#Pass data to GCS
 def transmit_packet():
     with telemetry_data.lock: # Acquire lock to update telemetry data
         telemetry_data.hiker_positon = hiker_pos
