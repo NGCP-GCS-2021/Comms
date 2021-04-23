@@ -37,7 +37,7 @@ def packet_received_with(packet):
     data = None
 
     if packet_counter is 0:
-        packet_counter = struct.unpack("I", packet.data[:4])[0] -1 
+        packet_counter = struct.unpack("I", packet.data[:4])[0] -1
         data = packet.data[4:]
         print("expecting ", packet_counter," packets")
         packet_buffer = b''
@@ -85,6 +85,8 @@ try:
             move_vector.lat /= 1000
             move_vector.lng /= 1000
             current_pos += move_vector
+
+        current_state = not current_state
 
         time.sleep(1)
 except KeyboardInterrupt:
