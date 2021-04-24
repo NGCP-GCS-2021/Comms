@@ -1,7 +1,6 @@
 from __future__ import annotations
 import time
 import typing
-import struct
 from digi.xbee.devices import DigiMeshDevice
 from enum import Enum
 
