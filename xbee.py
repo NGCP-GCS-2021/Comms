@@ -412,7 +412,7 @@ class ManualControl():
     arm: float
     claw: float
     speed: float
-    max_speed: float
+    #max_speed: float <- max said to get rid of max speed
 
     def __init__(self, vertical, horizontal, arm, claw, speed):
         self.vertical = vertical
