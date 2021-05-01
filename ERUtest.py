@@ -4,9 +4,18 @@ Development script for UGV Software Team 1 to test on Max's local Xbee
 
 import time, math, requests
 import xbee
-from .. import MPU
+from .. import MPU, motor_control
 
-comm_port = "/dev/ttyUSB0"  # changes based on where XBee is instantiated (Max is working on it)
+RGHT = 0
+LEFT = 1
+BOTH = 2
+FWD  = 0
+REV  = 1
+
+motor = MotorClass() # Motor object 
+# mpuObj = mpuClass.mpuClass_2_5() mpu Object 
+
+comm_port = "/dev/ttyUSB0"  # Changes based on where XBee is instantiated (Max is working on it)
                             # is not affected by reboots, only unplugging devices
 baud_rate = "9600"
 
@@ -34,7 +43,7 @@ gcs_addr = None
 geoFence = []
 
 hiker_pos = LatLng(0,0)
-current_pos = LatLng(35.082094, -120.512722)
+current_pos = LatLng(35.082094, -120.512722)    # CPP lol
 current_state = 0
 
 packet_buffer = b''
@@ -47,6 +56,7 @@ def packet_received_with(packet):
     global packet_buffer
     global current_state
     global hiker_position
+    # global man_con
 
     with gcs_lock:
         gcs_addr = packet.remote_device.get_64bit_addr()
@@ -66,12 +76,13 @@ def packet_received_with(packet):
     if packet_counter is 0:
         with xbee.read_lock: # Acquire lock to read command data from GCS  ||  Read data from GCS
             command_data = ToERU.deserialize(packet_buffer)
-#            geoFence = command_data.geo_fence
+            # geoFence = command_data.geo_fence
 
             if command_data.stop:
                 print("STOPPING AT ", current_pos)     # Emergency Stop
-            hiker_pos = command_data.hiker_position     # use command_data.(whatever) to receive whatever data is needed
-            current_state = command_data.perform_state
+            hiker_pos = command_data.hiker_position    # Use command_data.(whatever) to receive whatever data is needed
+            current_state = command_data.perform_state # How many states are there? 
+            # man_con = command_data.manual_control    # Manual Control Data from XBee
 
 device.add_data_received_callback(packet_received_with)
 
@@ -100,28 +111,65 @@ try:
     transmitThread.start()
 
     while True:
-        if current_state is 0:
+
+        if current_state is 1: # (1 == Ready/Idle & Waiting Command)
             print("Awaiting command data")
-        else:
+
+        # else if current_state is 2:  (2 == Landing Sequence)
+        #    print("Beginning Landing Sequence")
+        #    mpuObj.chuteDeployAndLandedCheck()
+
+        # else if current_state is 3:  (3 == Landed)
+            #    print("Landed")
+
+        else: # Possible Change: else if current_state is 4 (4 == Waypoint Nav/Nav to Hiker)
             print("Performing normal operations for state ", current_state)
-            move_vector = hiker_pos-current_pos
+            move_vector = hiker_pos - current_pos
             print("Need to move ", move_vector)
             move_vector.lat /= 1000
             move_vector.lng /= 1000
             current_pos += move_vector
+            # waypoint nav function idk 
 
-        current_state = not current_state
+        # else if current_state is 5:  (5 == Upside Down)
+            #    print("Upside Down")
 
+        # else if current_state is 6 (6 == Manual Control (Nav and Payload Retrieval))
+            # vertical = man_con.vertical
+            # horizontal = man_con.horizontal
+            # speed = man_con.speed
+            
+            # motor.percentage(RGHT, FWD, speed*max(-1, min(horizontal+vertical, 1)))
+            # motor.percentage(LEFT, FWD, speed*max(-1, min(-horizontal+vertical, 1)))
+
+        # else if current_state is 7:  (7 == Hiker Secured)
+            #    print("Hiker Secured")
+
+        # else if current_state is 8:  (8 == Hiker Not Secured)
+            #    print("Hiker Not Secured")
+
+        # else if current_state is 9:  (9 == Navigating to EVAC site)
+            #    print("Navigating to EVAC site")
+            #    Waypoint Nav? Manual? idk
+
+        # else if current_state is 10:  (10 == Hiker Delivered)
+            #    print("Hiker Delivered")
+
+        # else if current_state is 11:  (11 == Navigating to Ground Control)
+            #    print("Navigating to Ground Control")
+            #    Waypoint Nav? Manual? idk
+
+        # else if current_state is -1:  (-1 == Error)
+            #    print("Error")
+
+        # current_state = not current_state
         time.sleep(1)
+
 except KeyboardInterrupt:
     print('Stopping')
 finally:
     device.del_data_received_callback(packet_received_with)
-
-
-
-
-
+    motor.destroy()
 
 # inside of navigation function:
     #     geoFence = command_data.geo_fence
