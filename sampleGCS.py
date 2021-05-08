@@ -5,7 +5,7 @@ from xbee import ToERU, ToMAC, ToGCS, Orientation, LatLng, ManualControl, Geofen
 import threading
 import struct
 
-comm_port = "/dev/ttyUSB0" # can be swapped out for "/dev/ttyUSB0" for serial connection
+comm_port = "/dev/ttyUSB1" # can be swapped out for "/dev/ttyUSB0" for serial connection
 baud_rate = "9600"
 
 device = DigiMeshDevice(port=comm_port, baud_rate=baud_rate)
