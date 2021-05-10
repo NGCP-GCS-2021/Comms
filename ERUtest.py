@@ -4,6 +4,7 @@ Development script for UGV Software Team 1 to test on Max's local Xbee
 
 import time, math, requests
 import xbee
+import maestro
 from .. import MPU, motor_control
 
 RGHT = 0
@@ -21,6 +22,14 @@ baud_rate = "9600"
 
 device = DigiMeshDevice(port=comm_port, baud_rate=baud_rate)
 device.open()
+
+servo = maestro.Controller(ttyStr='/dev/ttyACM0')
+arms = 0.0
+claws = 0.0
+max_speed = 10
+
+servoMinRange = 448
+servoMaxRange = 2554
 
 def sample_callback(message):
     print('Received: ', message.data, '\nFrom:', message.remote_device.get_node_id())
@@ -56,7 +65,7 @@ def packet_received_with(packet):
     global packet_buffer
     global current_state
     global hiker_position
-    # global man_con
+    global man_con
 
     with gcs_lock:
         gcs_addr = packet.remote_device.get_64bit_addr()
@@ -82,7 +91,7 @@ def packet_received_with(packet):
                 print("STOPPING AT ", current_pos)     # Emergency Stop
             hiker_pos = command_data.hiker_position    # Use command_data.(whatever) to receive whatever data is needed
             current_state = command_data.perform_state # How many states are there? 
-            # man_con = command_data.manual_control    # Manual Control Data from XBee
+            man_con = command_data.manual_control    # Manual Control Data from XBee
 
 device.add_data_received_callback(packet_received_with)
 
@@ -107,8 +116,29 @@ def transmit_packet():
 
 transmitThread = xbee.TransmitThread(transmit_packet)
 
+def setServo(servoNum, min, max)
+    servo.setRange(servoNum,min,max)
+    print(f"The target =  {servo.getPosition(servoNum)}.")
+    print(f"The target is moving = {servo.isMoving(servoNum)}")
+    servo.setAccel(servoNum,0)
+    servo.setSpeed(servoNum,15)
+
+def clamp(value, min, max):
+    if(value < min):
+        return min
+    if(value > max):
+        return max
+    return value
+
+def MotorMove(servoNumber, target):
+    print("Clamped Value: ", clamp(target, servoMinRange, servoMaxRange))
+    servo.setTarget(servoNumber, clamp(target, servoMinRange, servoMaxRange) * 2)
+
 try:
     transmitThread.start()
+
+    setServo(0,servoMinRange*2,servoMaxRange*2)
+    setServo(1,sawervoMinRange*2,servoMaxRange*2)
 
     while True:
 
@@ -122,25 +152,45 @@ try:
         # else if current_state is 3:  (3 == Landed)
             #    print("Landed")
 
-        else: # Possible Change: else if current_state is 4 (4 == Waypoint Nav/Nav to Hiker)
-            print("Performing normal operations for state ", current_state)
-            move_vector = hiker_pos - current_pos
-            print("Need to move ", move_vector)
-            move_vector.lat /= 1000
-            move_vector.lng /= 1000
-            current_pos += move_vector
+        #else: # Possible Change: else if current_state is 4 (4 == Waypoint Nav/Nav to Hiker)
+         #   print("Performing normal operations for state ", current_state)
+         #   move_vector = hiker_pos - current_pos
+         #   print("Need to move ", move_vector)
+         #   move_vector.lat /= 1000
+         #   move_vector.lng /= 1000
+         #   current_pos += move_vector
             # waypoint nav function idk 
 
         # else if current_state is 5:  (5 == Upside Down)
             #    print("Upside Down")
 
-        # else if current_state is 6 (6 == Manual Control (Nav and Payload Retrieval))
+        else if current_state is 6 # 6 == Manual Control (Nav and Payload Retrieval))
             # vertical = man_con.vertical
             # horizontal = man_con.horizontal
             # speed = man_con.speed
             
+            arms = man_con.arm
+            claws = man_con.claw
+            
             # motor.percentage(RGHT, FWD, speed*max(-1, min(horizontal+vertical, 1)))
             # motor.percentage(LEFT, FWD, speed*max(-1, min(-horizontal+vertical, 1)))
+            
+            stepSize = 300
+            targetArms = (int)(servo.getPosition(0)/2)
+            targetClaw = (int)(servo.getPosition(1)/2)
+
+            if arms < 0:
+                targetArms -= (int)(stepSize * abs(arms))
+            elif arms > 0:
+                targetArms += (int)(stepSize * abs(arms))
+            if claws < 0:
+                targetClaws -= (int)(stepSize * abs(claws))
+            elif claws > 0:
+                targetClaws += (int)(stepSize * abs(claws))
+                
+            MotorMove(0, targetArms)
+            MotorMove(1, targetClaw)
+            time.sleep(.5)
 
         # else if current_state is 7:  (7 == Hiker Secured)
             #    print("Hiker Secured")
@@ -170,6 +220,7 @@ except KeyboardInterrupt:
 finally:
     device.del_data_received_callback(packet_received_with)
     motor.destroy()
+    servo.close
 
 # inside of navigation function:
     #     geoFence = command_data.geo_fence
