@@ -1,5 +1,5 @@
 """
-Development script for UGV Software Team 1 to test on Max's local Xbee
+Development test suite for UGV Software Team 1
 """
 
 import time, math, requests
@@ -141,15 +141,10 @@ try:
         if current_state is 1: # (1 == Ready/Idle & Waiting Command)
             print("Awaiting command data")
 
-        # else if current_state is 2:  (2 == Landing Sequence)
-        #    print("Beginning Landing Sequence")
-        #    mpuObj.chuteDeployAndLandedCheck()
+        # TODO: implement the rest of the states (not 2: Landing Seq nor 3: Landed)
 
-        # else if current_state is 3:  (3 == Landed)
-            #    print("Landed")
-
-        #else: # Possible Change: else if current_state is 4 (4 == Waypoint Nav/Nav to Hiker)
-         #   print("Performing normal operations for state ", current_state)
+        elif current_state is 4: # Possible Change: elif current_state is 4 (4 == Waypoint Nav/Nav to Hiker)
+           print("Performing normal operations for state ", current_state)
          #   move_vector = hiker_pos - current_pos
          #   print("Need to move ", move_vector)
          #   move_vector.lat /= 1000
@@ -157,8 +152,8 @@ try:
          #   current_pos += move_vector
             # waypoint nav function idk 
 
-        # else if current_state is 5:  (5 == Upside Down)
-            #    print("Upside Down")
+        elif current_state is 5: # (5 == Upside Down)
+            print("Upside Down")
 
         elif current_state is 6: # 6 == Manual Control (Nav and Payload Retrieval))
             vertical = man_ctrl.vertical
@@ -187,25 +182,25 @@ try:
             MotorMove(1, targetClaw)
             time.sleep(.5)
 
-        # else if current_state is 7:  (7 == Hiker Secured)
-            #    print("Hiker Secured")
+        elif current_state is 7:  # (7 == Hiker Secured)
+            print("Hiker Secured")
 
-        # else if current_state is 8:  (8 == Hiker Not Secured)
-            #    print("Hiker Not Secured")
+        elif current_state is 8: # (8 == Hiker Not Secured)
+               print("Hiker Not Secured")
 
-        # else if current_state is 9:  (9 == Navigating to EVAC site)
-            #    print("Navigating to EVAC site")
+        elif current_state is 9: # (9 == Navigating to EVAC site)
+               print("Navigating to EVAC site")
             #    Waypoint Nav? Manual? idk
 
-        # else if current_state is 10:  (10 == Hiker Delivered)
-            #    print("Hiker Delivered")
+        elif current_state is 10: # (10 == Hiker Delivered)
+               print("Hiker Delivered")
 
-        # else if current_state is 11:  (11 == Navigating to Ground Control)
-            #    print("Navigating to Ground Control")
+        elif current_state is 11: # (11 == Navigating to Ground Control)
+               print("Navigating to Ground Control")
             #    Waypoint Nav? Manual? idk
 
-        # else if current_state is -1:  (-1 == Error)
-            #    print("Error")
+        elif current_state is -1: # (-1 == Error)
+               print("Error")
 
         # ================== Transmit data to GCS ==================
         transmitThread = xbee.TransmitThread(transmit_packet)
