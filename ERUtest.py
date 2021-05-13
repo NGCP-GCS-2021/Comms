@@ -27,6 +27,7 @@ servo = maestro.Controller(ttyStr='/dev/ttyACM0')
 arms = 0.0
 claws = 0.0
 max_speed = 10
+conversionValue = 2
 
 servoMinRange = 448
 servoMaxRange = 2554
@@ -65,7 +66,7 @@ def packet_received_with(packet):
     global packet_buffer
     global current_state
     global hiker_position
-    global man_con
+    global man_ctrl
 
     with gcs_lock:
         gcs_addr = packet.remote_device.get_64bit_addr()
@@ -91,10 +92,8 @@ def packet_received_with(packet):
                 print("STOPPING AT ", current_pos)     # Emergency Stop
             hiker_pos = command_data.hiker_position    # Use command_data.(whatever) to receive whatever data is needed
             current_state = command_data.perform_state # How many states are there? 
-            man_con = command_data.manual_control    # Manual Control Data from XBee
-
-device.add_data_received_callback(packet_received_with)
-
+            man_ctrl = command_data.manual_control    # Manual Control Data from XBee
+            
 #Pass data to GCS
 def transmit_packet():
     with telemetry_data.lock: # Acquire lock to update telemetry data
@@ -104,43 +103,40 @@ def transmit_packet():
         telemetry_data.battery -= 0.0001
         telemetry_data.current_state = current_state
 
-# TODO: set up sampleGCS.py to work locally with Brendon's hardware
-# TODO: receive and manipulate data from MPU and send to GCS
-# TODO: set up parsing of GCS data packets
-
     if gcs_addr:
         telemetry_data.serialize().transmit(device, gcs_addr)
         print("Transmitting")
 
     time.sleep(0.25)
 
-transmitThread = xbee.TransmitThread(transmit_packet)
-
-def setServo(servoNum, min, max)
-    servo.setRange(servoNum,min,max)
+def setServo(servoNum, minimum, maximum) :
+    servo.setRange(servoNum,minimum,maximum)
     print(f"The target =  {servo.getPosition(servoNum)}.")
     print(f"The target is moving = {servo.isMoving(servoNum)}")
     servo.setAccel(servoNum,0)
     servo.setSpeed(servoNum,15)
 
-def clamp(value, min, max):
-    if(value < min):
-        return min
-    if(value > max):
-        return max
+def clamp(value, minimum, maximum):
+    if(value < minimum):
+        return minimum
+    if(value > maximum):
+        return maximum
     return value
 
 def MotorMove(servoNumber, target):
     print("Clamped Value: ", clamp(target, servoMinRange, servoMaxRange))
-    servo.setTarget(servoNumber, clamp(target, servoMinRange, servoMaxRange) * 2)
+    servo.setTarget(servoNumber, clamp(target, servoMinRange, servoMaxRange) * conversionValue)
 
 try:
     transmitThread.start()
 
     setServo(0,servoMinRange*2,servoMaxRange*2)
-    setServo(1,sawervoMinRange*2,servoMaxRange*2)
+    setServo(1,servoMinRange*2,servoMaxRange*2)
 
     while True:
+
+        # ================== Receive data from GCS ==================
+        device.add_data_received_callback(packet_received_with)
 
         if current_state is 1: # (1 == Ready/Idle & Waiting Command)
             print("Awaiting command data")
@@ -164,29 +160,28 @@ try:
         # else if current_state is 5:  (5 == Upside Down)
             #    print("Upside Down")
 
-        else if current_state is 6 # 6 == Manual Control (Nav and Payload Retrieval))
-            # vertical = man_con.vertical
-            # horizontal = man_con.horizontal
-            # speed = man_con.speed
-            
-            arms = man_con.arm
-            claws = man_con.claw
+        elif current_state is 6: # 6 == Manual Control (Nav and Payload Retrieval))
+            vertical = man_ctrl.vertical
+            horizontal = man_ctrl.horizontal
+            speed = man_ctrl.speed 
+            arms = man_ctrl.arm
+            claws = man_ctrl.claw
             
             # motor.percentage(RGHT, FWD, speed*max(-1, min(horizontal+vertical, 1)))
             # motor.percentage(LEFT, FWD, speed*max(-1, min(-horizontal+vertical, 1)))
             
             stepSize = 300
-            targetArms = (int)(servo.getPosition(0)/2)
-            targetClaw = (int)(servo.getPosition(1)/2)
+            targetArms = int(servo.getPosition(0)/2)
+            targetClaw = int(servo.getPosition(1)/2)
 
             if arms < 0:
-                targetArms -= (int)(stepSize * abs(arms))
+                targetArms -= int(stepSize * abs(arms))
             elif arms > 0:
-                targetArms += (int)(stepSize * abs(arms))
+                targetArms += int(stepSize * abs(arms))
             if claws < 0:
-                targetClaws -= (int)(stepSize * abs(claws))
+                targetClaws -= int(stepSize * abs(claws))
             elif claws > 0:
-                targetClaws += (int)(stepSize * abs(claws))
+                targetClaws += int(stepSize * abs(claws))
                 
             MotorMove(0, targetArms)
             MotorMove(1, targetClaw)
@@ -212,7 +207,9 @@ try:
         # else if current_state is -1:  (-1 == Error)
             #    print("Error")
 
-        # current_state = not current_state
+        # ================== Transmit data to GCS ==================
+        transmitThread = xbee.TransmitThread(transmit_packet)
+
         time.sleep(1)
 
 except KeyboardInterrupt:
@@ -220,7 +217,4 @@ except KeyboardInterrupt:
 finally:
     device.del_data_received_callback(packet_received_with)
     motor.destroy()
-    servo.close
-
-# inside of navigation function:
-    #     geoFence = command_data.geo_fence
+    servo.close 
